@@ -4,3 +4,6 @@
 app/node_modules
 app/dist
 app/.env.local
+app/.env.production
+.supabase-db-password
+.supabase-db-password-new
