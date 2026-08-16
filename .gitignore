@@ -1,3 +1,6 @@
 .branches
 .temp
 .env
+app/node_modules
+app/dist
+app/.env.local

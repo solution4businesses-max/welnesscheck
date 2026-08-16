@@ -2,12 +2,17 @@
 -- so `supabase start` gives you a backend that looks like the real app,
 -- not an empty database. Local dev only — do not run against production.
 
--- Two demo auth users (password: "password123" for both, local only)
+-- Two demo auth users (password: "password123" for both, local only).
+-- GoTrue's driver scans these token columns as non-nullable strings, so they
+-- must be '' rather than left NULL or password sign-in fails with a
+-- "converting NULL to string" 500 (only surfaces when seeding auth.users
+-- directly instead of going through the signup API).
 insert into auth.users
-  (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+  (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at,
+   confirmation_token, recovery_token, email_change_token_new, email_change, email_change_token_current, phone_change, phone_change_token)
 values
-  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'maya@example.com', crypt('password123', gen_salt('bf')), now(), now(), now()),
-  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'danielle@example.com', crypt('password123', gen_salt('bf')), now(), now(), now());
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'maya@example.com', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '', '', '', '', '', ''),
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'danielle@example.com', crypt('password123', gen_salt('bf')), now(), now(), now(), '', '', '', '', '', '', '');
 
 insert into profiles (id, role, full_name, timezone) values
   ('11111111-1111-1111-1111-111111111111', 'client', 'Maya R.', 'America/New_York'),

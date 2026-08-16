@@ -45,13 +45,15 @@ and `docs/schema.sql` in this same submission.
 
 ## Proof, not just a plan
 
-Rather than only describing the RLS approach, I built and ran it: the
-schema and policies in this proposal are live in a local Supabase instance
-(seeded with data matching Maya/Danielle from your own prototype), and I
-verified directly against Postgres that a coach querying journal entries
-gets back only the ones a client explicitly shared — not the whole
-journal. That's runnable locally in one command (`supabase start`), no
-account or payment needed, detailed in the README.
+Rather than only describing the approach, I built it: `app/` in this repo
+is a working React app wired to a real local Supabase backend — Home,
+Check-in, Journal (with per-entry coach-sharing), Goals (weekly grid,
+writes to Postgres), Library, and the Therapist/coach dashboard, all
+reading and writing live data, with the same RLS policies from
+`docs/schema.sql` actually enforced: sign in as the client, write a
+private journal entry, sign in as the coach, and it isn't there — share it
+from the client side and it shows up. Two-command local setup in the
+README, no account or payment needed.
 
 ## Rough estimate
 

@@ -14,8 +14,27 @@ the wellness coaching app currently live at
   — answer to the open "do we need a coach-side interface" question.
 - [`supabase/`](./supabase) — a **working**, runnable local Supabase project:
   full schema + RLS policies (`supabase/migrations/`) and seed data modeled
-  on the prototype's own content (`supabase/seed.sql`), so the backend
-  design isn't just a diagram — you can stand it up and query it.
+  on the prototype's own content (`supabase/seed.sql`).
+- [`app/`](./app) — a **working sample app** (React + Vite), not just a
+  schema: Home, Check-in, Journal (with per-entry coach-sharing), Goals
+  (weekly grid, writes to Postgres), Library, and a Therapist/coach
+  dashboard — all reading and writing the live Supabase backend above, with
+  RLS actually enforced (sign in as the coach and you cannot see the
+  client's private journal entries; sign in as the client and you can).
+
+## Run the sample app
+
+```bash
+supabase start        # from the repo root — starts the backend + loads seed data
+cd app && npm install && npm run dev
+```
+
+Open the printed localhost URL and sign in as either seeded demo account
+right from the login screen (no typing credentials — there's a button for
+each). Try: check in as Maya, tick off a goal, write a journal entry and
+toggle "share with coach," then sign out and sign back in as Danielle — the
+goal progress and mood trend update live, and only the journal entry you
+shared is visible.
 
 ## Run the backend locally (no account needed)
 
@@ -32,7 +51,7 @@ content already in the prototype. Studio UI opens at the URL printed in
 the terminal so you can browse the tables directly.
 
 ```bash
-supabase stop
+supabase stop        # when you're done with the standalone backend
 ```
 
 when you're done — it leaves the data in a local Docker volume, so
