@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "The Pure Path",
+    "slug": "wellnesscheck",
+    "scheme": "purepath",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#f7f4ef",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.solutions4businesses.purepathdemo"
+    },
+    "android": {
+      "package": "com.solutions4businesses.purepathdemo",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar"
+    ],
+    "owner": "raghunbaddes-team",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "14dde6b8-6089-42ca-b49c-ebb1e6210e63"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/14dde6b8-6089-42ca-b49c-ebb1e6210e63"
+    }
+  }
+}
