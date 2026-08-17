@@ -56,25 +56,36 @@ navigation" are different bars.
 
 ## Expo packaging status
 
-- ✅ **Verified running natively on Android** — installed Expo Go on a
-  real emulator, launched the project over the dev server, and clicked
-  through login, Home, and Goals, including a live write (toggling a
-  goal day off/on and watching the count update against the hosted
-  Postgres database). Screenshots of this run are in the PR/session
-  history; not re-committed here to keep the repo lean.
+- ✅ **Standalone Android APK** — built via `eas build --platform android
+  --profile preview` (see `eas.json`), downloaded and installed directly
+  (`adb install`, no Expo Go), launched, and clicked through: login,
+  real Home/Goals data, a live write against the hosted database, all
+  with zero dependency on any dev machine.
+- ✅ **Standalone iOS Simulator build** — built via `eas build --platform
+  ios --profile preview` (`ios.simulator: true` in `eas.json`, so it needs
+  no Apple Developer account), installed on a real iPhone 17 Simulator via
+  `xcrun simctl install`, launched, and confirmed rendering the correct
+  login screen. Note: this is a **Simulator-only build**, not a
+  distributable `.ipa` — a real-device/App-Store build additionally
+  needs an Apple Developer Program membership ($99/yr) for code signing,
+  which is a real-money account step left for you to own.
 - ✅ Static web export (`npx expo export -p web`) deploys cleanly to
   Vercel — same code, same Supabase project, browser-accessible: see the
   live link in the root README.
-- ✅ Linked to EAS (`@raghunbaddes-team/wellnesscheck`) and published via
-  `eas update` — viewable through the EAS dashboard's Updates tab
-  (scan the QR with Expo Go from a phone).
-- ⏳ **iOS Simulator**: blocked in the environment this was built in —
-  Xcode was installed but never had its command-line tools path selected
-  (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`,
-  needs a local password prompt neither an agent nor a remote session can
-  supply). The code itself is platform-agnostic RN/Expo — nothing here is
-  Android-specific — so this is an environment gap, not a code gap.
-- ⏳ Native release builds (EAS Build → `.ipa`/`.aab` for App Store/Play
-  Store submission) — needs an Apple Developer account ($99/yr) for iOS
-  and a Play Console account ($25 one-time) for Android; not created here
-  since that's a real-money, real-account step for you to own.
+- ✅ Linked to EAS (`@raghunbaddes-team/wellnesscheck`). Rebuild anytime
+  with `eas build --platform android --profile preview` (or `ios`) —
+  the download links Expo hosts expire after a while, so regenerate via
+  the EAS dashboard or CLI when needed rather than relying on old links.
+- ⚠️ **EAS Update (OTA via Expo Go) hit an unresolved platform issue** —
+  publishing to a branch/channel and opening it in Expo Go
+  (`exp://u.expo.dev/...`) hung indefinitely fetching assets from Expo's
+  CDN, independent of environment/config fixes tried (channel linking,
+  runtime version policy, cache clearing). Standalone builds (above) were
+  used instead and work reliably; OTA updates to those installed builds
+  are untested and would need this resolved first — worth a fresh look
+  with EAS dashboard access if OTA updates matter for this project later.
+- Real bugs hit and fixed along the way, beyond the one below: a stale
+  Metro bundler cache silently excluded `EXPO_PUBLIC_*` env vars from
+  exported bundles (fix: `--clear` on export), and EAS Build's cloud
+  workers have zero access to a local `.env` — the same vars had to be
+  registered separately via `eas env:create` for the build to see them.

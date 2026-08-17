@@ -15,9 +15,14 @@ writes, on real deployed infrastructure — not a mockup.
 
 - **Web app**: [app-iota-nine-24.vercel.app](https://app-iota-nine-24.vercel.app)
 - **Mobile app (web build)**: [mobile-fawn-five.vercel.app](https://mobile-fawn-five.vercel.app)
-- **Mobile app (native)**: linked to EAS (`@raghunbaddes-team/wellnesscheck`)
-  — verified running via Expo Go on an Android emulator; see
-  [`mobile/README.md`](./mobile/README.md) for status on iOS and store builds.
+- **Mobile app (standalone Android APK)**: built via EAS, installed and
+  verified on a real emulator with zero dev-machine dependency. Download
+  links expire — rebuild anytime with `eas build --platform android
+  --profile preview` from `mobile/` (see [`mobile/README.md`](./mobile/README.md)).
+- **Mobile app (iOS Simulator build)**: same, via `eas build --platform
+  ios --profile preview` — Simulator-only (no Apple Developer account
+  needed); a real-device/App Store `.ipa` needs that account, which is
+  yours to create.
 
 Sign in with either seeded demo account on any of the above —
 `maya@example.com` (client) or `danielle@example.com` (coach), password
