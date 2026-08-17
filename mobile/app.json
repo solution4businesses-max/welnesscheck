@@ -10,12 +10,15 @@
     "backgroundColor": "#f7f4ef",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.solutions4businesses.purepathdemo"
+      "bundleIdentifier": "com.solutions4businesses.purepathdemo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.solutions4businesses.purepathdemo",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#f7f4ef",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -37,7 +40,7 @@
       }
     },
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "sdkVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/14dde6b8-6089-42ca-b49c-ebb1e6210e63"
