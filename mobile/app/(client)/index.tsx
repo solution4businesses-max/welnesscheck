@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useSessionContext } from '../../lib/SessionContext'
 import { currentWeekISO, todayISO } from '../../lib/dates'
-import { Screen, Eyebrow, Title, Card, SignOutButton } from '../../components/ui'
+import { Screen, Eyebrow, Title, Card, SignOutButton, ErrorBanner } from '../../components/ui'
+import { friendlyErrorMessage } from '../../lib/errors'
 import { colors } from '../../lib/theme'
 
 type Goal = { id: string; title: string; target_days_per_week: number }
@@ -18,50 +19,54 @@ export default function Home() {
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [nextSession, setNextSession] = useState<SessionRow | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-        const [{ data: checkIn }, { data: goalRows }, { data: sessionRows }] = await Promise.all([
-          supabase.from('check_ins').select('id').eq('check_in_date', todayISO()).maybeSingle(),
-          supabase
-            .from('goals')
-            .select('id, title, target_days_per_week')
-            .eq('status', 'active')
-            .order('created_at'),
-          supabase
-            .from('sessions')
-            .select('scheduled_at, duration_minutes')
-            .gt('scheduled_at', new Date().toISOString())
-            .order('scheduled_at')
-            .limit(1),
-        ])
-        if (cancelled) return
-        setCheckedInToday(!!checkIn)
-        setGoals(goalRows ?? [])
-        setNextSession(sessionRows?.[0] ?? null)
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [{ data: checkIn }, { data: goalRows }, { data: sessionRows }] = await Promise.all([
+        supabase.from('check_ins').select('id').eq('check_in_date', todayISO()).maybeSingle(),
+        supabase
+          .from('goals')
+          .select('id, title, target_days_per_week')
+          .eq('status', 'active')
+          .order('created_at'),
+        supabase
+          .from('sessions')
+          .select('scheduled_at, duration_minutes')
+          .gt('scheduled_at', new Date().toISOString())
+          .order('scheduled_at')
+          .limit(1),
+      ])
+      setCheckedInToday(!!checkIn)
+      setGoals(goalRows ?? [])
+      setNextSession(sessionRows?.[0] ?? null)
 
-        const week = currentWeekISO()
-        if (goalRows?.length) {
-          const { data: logs } = await supabase
-            .from('goal_logs')
-            .select('goal_id, log_date, completed')
-            .in('goal_id', goalRows.map((g) => g.id))
-            .in('log_date', week)
-            .eq('completed', true)
-          if (!cancelled && logs) {
-            const counts: Record<string, number> = {}
-            for (const log of logs) counts[log.goal_id] = (counts[log.goal_id] ?? 0) + 1
-            setProgress(counts)
-          }
+      const week = currentWeekISO()
+      if (goalRows?.length) {
+        const { data: logs } = await supabase
+          .from('goal_logs')
+          .select('goal_id, log_date, completed')
+          .in('goal_id', goalRows.map((g) => g.id))
+          .in('log_date', week)
+          .eq('completed', true)
+        if (logs) {
+          const counts: Record<string, number> = {}
+          for (const log of logs) counts[log.goal_id] = (counts[log.goal_id] ?? 0) + 1
+          setProgress(counts)
         }
-        setLoading(false)
       }
-    load()
-    return () => {
-      cancelled = true
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   if (!profile) return null
   const firstName = profile.full_name.split(' ')[0]
@@ -77,7 +82,9 @@ export default function Home() {
         <SignOutButton />
       </View>
 
-      {loading ? (
+      {error ? (
+        <ErrorBanner message={error} onRetry={load} />
+      ) : loading ? (
         <ActivityIndicator />
       ) : (
         <>

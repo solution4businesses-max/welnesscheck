@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { currentWeekISO } from '../lib/dates'
+import { friendlyErrorMessage } from '../lib/errors'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 type ClientCard = {
   client_id: string
@@ -16,9 +18,12 @@ type ClientCard = {
 export function Therapist() {
   const [cards, setCards] = useState<ClientCard[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
       const { data: coachClients } = await supabase
         .from('coach_clients')
         .select('client_id, program_started_on, program_length_weeks')
@@ -76,10 +81,16 @@ export function Therapist() {
       }
 
       setCards(built)
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
       setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const weeksSinceStart = (started: string) =>
     Math.max(1, Math.ceil((Date.now() - new Date(started).getTime()) / (7 * 24 * 60 * 60 * 1000)))
@@ -91,50 +102,52 @@ export function Therapist() {
         <h1 className="font-serif text-2xl text-stone-800">Your clients.</h1>
       </div>
 
+      {error && <ErrorBanner message={error} onRetry={load} />}
       {loading && <p className="text-sm text-stone-400">Loading…</p>}
-      {!loading && cards.length === 0 && <p className="text-sm text-stone-400">No clients assigned yet.</p>}
+      {!error && !loading && cards.length === 0 && <p className="text-sm text-stone-400">No clients assigned yet.</p>}
 
-      {cards.map((c) => (
-        <div key={c.client_id} className="rounded-xl bg-white border border-stone-200 p-4 space-y-3">
-          <div className="flex items-baseline justify-between">
-            <p className="font-serif text-lg text-stone-800">{c.full_name}</p>
-            <p className="text-xs text-stone-400">
-              Week {weeksSinceStart(c.program_started_on)} of {c.program_length_weeks}
-            </p>
-          </div>
-
-          {c.prepNote && (
-            <div className="bg-stone-50 border border-stone-100 rounded-lg p-3">
-              <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">
-                {c.sessionAt &&
-                  new Date(c.sessionAt).toLocaleString(undefined, {
-                    weekday: 'short',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}{' '}
-                · prep ready
+      {!error &&
+        cards.map((c) => (
+          <div key={c.client_id} className="rounded-xl bg-white border border-stone-200 p-4 space-y-3">
+            <div className="flex items-baseline justify-between">
+              <p className="font-serif text-lg text-stone-800">{c.full_name}</p>
+              <p className="text-xs text-stone-400">
+                Week {weeksSinceStart(c.program_started_on)} of {c.program_length_weeks}
               </p>
-              <p className="text-sm text-stone-700 italic">"{c.prepNote}"</p>
             </div>
-          )}
 
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">Mood trend</p>
-            <p className="text-sm text-stone-600">
-              {Object.entries(c.moodCounts)
-                .map(([mood, n]) => `${mood} ×${n}`)
-                .join(' · ') || 'No check-ins this week'}
-            </p>
-          </div>
+            {c.prepNote && (
+              <div className="bg-stone-50 border border-stone-100 rounded-lg p-3">
+                <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">
+                  {c.sessionAt &&
+                    new Date(c.sessionAt).toLocaleString(undefined, {
+                      weekday: 'short',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}{' '}
+                  · prep ready
+                </p>
+                <p className="text-sm text-stone-700 italic">"{c.prepNote}"</p>
+              </div>
+            )}
 
-          <div>
-            <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">Goals</p>
-            <p className="text-sm text-stone-600">
-              {c.goals.map((g) => `${g.title} ${g.done}/${g.target}`).join(' · ') || 'No active goals'}
-            </p>
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">Mood trend</p>
+              <p className="text-sm text-stone-600">
+                {Object.entries(c.moodCounts)
+                  .map(([mood, n]) => `${mood} ×${n}`)
+                  .join(' · ') || 'No check-ins this week'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">Goals</p>
+              <p className="text-sm text-stone-600">
+                {c.goals.map((g) => `${g.title} ${g.done}/${g.target}`).join(' · ') || 'No active goals'}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   )
 }

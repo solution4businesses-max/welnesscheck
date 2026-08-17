@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { friendlyErrorMessage } from '../lib/errors'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 type Content = { id: string; title: string; type: 'audio' | 'video' | 'pdf'; duration_seconds: number | null; is_new: boolean }
 type Pick = { coach_note: string; library_content: Content }
@@ -17,9 +19,12 @@ export function Library() {
   const [items, setItems] = useState<Content[]>([])
   const [pick, setPick] = useState<Pick | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function load() {
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
       const [{ data: content }, { data: picks }] = await Promise.all([
         supabase.from('library_content').select('id, title, type, duration_seconds, is_new').order('created_at'),
         supabase
@@ -31,10 +36,16 @@ export function Library() {
       setItems(content ?? [])
       const p = picks?.[0] as unknown as Pick | undefined
       setPick(p ?? null)
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
       setLoading(false)
     }
-    load()
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   return (
     <div className="max-w-md mx-auto px-5 py-8 space-y-6">
@@ -43,7 +54,9 @@ export function Library() {
         <h1 className="font-serif text-2xl text-stone-800">What you might need today.</h1>
       </div>
 
-      {pick && (
+      {error && <ErrorBanner message={error} onRetry={load} />}
+
+      {!error && pick && (
         <div className="rounded-xl bg-stone-800 text-white p-4">
           <p className="text-[10px] uppercase tracking-wide text-stone-300 mb-2">Coach pick for you · this week</p>
           <p className="text-sm font-medium">{pick.library_content.title}</p>
@@ -54,25 +67,27 @@ export function Library() {
         </div>
       )}
 
-      <section className="space-y-2">
-        <p className="text-xs uppercase tracking-wide text-stone-400">Everything</p>
-        {loading && <p className="text-sm text-stone-400">Loading…</p>}
-        {items.map((item) => (
-          <div key={item.id} className="rounded-xl bg-white border border-stone-200 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-stone-800">{item.title}</p>
-              <p className="text-xs text-stone-400 mt-0.5">
-                {[formatDuration(item.duration_seconds), TYPE_LABEL[item.type]].filter(Boolean).join(' · ')}
-              </p>
+      {!error && (
+        <section className="space-y-2">
+          <p className="text-xs uppercase tracking-wide text-stone-400">Everything</p>
+          {loading && <p className="text-sm text-stone-400">Loading…</p>}
+          {items.map((item) => (
+            <div key={item.id} className="rounded-xl bg-white border border-stone-200 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-stone-800">{item.title}</p>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  {[formatDuration(item.duration_seconds), TYPE_LABEL[item.type]].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              {item.is_new && (
+                <span className="text-[10px] uppercase tracking-wide text-stone-500 border border-stone-300 rounded-full px-2 py-0.5">
+                  New
+                </span>
+              )}
             </div>
-            {item.is_new && (
-              <span className="text-[10px] uppercase tracking-wide text-stone-500 border border-stone-300 rounded-full px-2 py-0.5">
-                New
-              </span>
-            )}
-          </div>
-        ))}
-      </section>
+          ))}
+        </section>
+      )}
     </div>
   )
 }

@@ -36,6 +36,17 @@ export function SignOutButton() {
   )
 }
 
+export function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <View style={styles.errorBanner}>
+      <Text style={styles.errorText}>{message}</Text>
+      <TouchableOpacity onPress={onRetry}>
+        <Text style={styles.retryText}>Try again</Text>
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
@@ -59,5 +70,23 @@ const styles = StyleSheet.create({
   signOut: {
     color: colors.faint,
     fontSize: 12,
+  },
+  errorBanner: {
+    backgroundColor: '#fbeceb',
+    borderWidth: 1,
+    borderColor: '#e8b4b0',
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+  },
+  errorText: {
+    color: '#a13f37',
+    fontSize: 13,
+  },
+  retryText: {
+    color: '#a13f37',
+    fontSize: 13,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 })

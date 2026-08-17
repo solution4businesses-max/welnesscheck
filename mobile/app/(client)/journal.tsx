@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, Switch, StyleSheet, ActivityIndicator } from 'react-native'
 import { supabase } from '../../lib/supabase'
-import { Screen, Eyebrow, Title, Card } from '../../components/ui'
+import { Screen, Eyebrow, Title, Card, ErrorBanner } from '../../components/ui'
+import { friendlyErrorMessage } from '../../lib/errors'
 import { colors } from '../../lib/theme'
 
 type Entry = {
@@ -19,14 +20,23 @@ export default function Journal() {
   const [shared, setShared] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('journal_entries')
-      .select('id, body, shared_with_coach, created_at')
-      .order('created_at', { ascending: false })
-    setEntries(data ?? [])
-    setLoading(false)
+    setLoading(true)
+    setError(null)
+    try {
+      const { data } = await supabase
+        .from('journal_entries')
+        .select('id, body, shared_with_coach, created_at')
+        .order('created_at', { ascending: false })
+      setEntries(data ?? [])
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -36,18 +46,26 @@ export default function Journal() {
   async function save() {
     if (!draft.trim()) return
     setSaving(true)
-    const { data: userData } = await supabase.auth.getUser()
-    await supabase.from('journal_entries').insert({
-      client_id: userData.user?.id,
-      source: 'session',
-      prompt_text: PROMPT,
-      body: draft.trim(),
-      shared_with_coach: shared,
-    })
-    setDraft('')
-    setShared(false)
-    setSaving(false)
-    load()
+    setSaveError(null)
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      await supabase.from('journal_entries').insert({
+        client_id: userData.user?.id,
+        source: 'session',
+        prompt_text: PROMPT,
+        body: draft.trim(),
+        shared_with_coach: shared,
+      })
+      // Only clear the draft once the write actually succeeds — otherwise
+      // a network failure would silently lose what the user just wrote.
+      setDraft('')
+      setShared(false)
+      load()
+    } catch (e) {
+      setSaveError(friendlyErrorMessage(e))
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -79,26 +97,29 @@ export default function Journal() {
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
+        {saveError && <Text style={styles.saveErrorText}>{saveError}</Text>}
       </Card>
 
       <Text style={styles.sectionLabel}>Earlier</Text>
+      {error && <ErrorBanner message={error} onRetry={load} />}
       {loading && <ActivityIndicator />}
-      {!loading && entries.length === 0 && <Text style={styles.muted}>No entries yet.</Text>}
-      {entries.map((e) => (
-        <Card key={e.id}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.muted}>
-              {new Date(e.created_at).toLocaleDateString(undefined, {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-              })}
-            </Text>
-            {e.shared_with_coach && <Text style={styles.badge}>Shared with coach</Text>}
-          </View>
-          <Text style={styles.entryBody}>{e.body}</Text>
-        </Card>
-      ))}
+      {!error && !loading && entries.length === 0 && <Text style={styles.muted}>No entries yet.</Text>}
+      {!error &&
+        entries.map((e) => (
+          <Card key={e.id}>
+            <View style={styles.entryHeader}>
+              <Text style={styles.muted}>
+                {new Date(e.created_at).toLocaleDateString(undefined, {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </Text>
+              {e.shared_with_coach && <Text style={styles.badge}>Shared with coach</Text>}
+            </View>
+            <Text style={styles.entryBody}>{e.body}</Text>
+          </Card>
+        ))}
     </Screen>
   )
 }
@@ -111,6 +132,7 @@ const styles = StyleSheet.create({
   shareLabel: { fontSize: 12, color: colors.muted },
   saveButton: { backgroundColor: colors.dark, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
   saveButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  saveErrorText: { color: '#a13f37', fontSize: 12, marginTop: 8 },
   sectionLabel: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.faint },
   muted: { color: colors.faint, fontSize: 13 },
   entryHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { supabase, DEMO_CLIENT_EMAIL, DEMO_COACH_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
 import { colors, serif } from '../lib/theme'
+import { friendlyErrorMessage } from '../lib/errors'
 
 export function LoginScreen() {
   const [busy, setBusy] = useState<'client' | 'coach' | null>(null)
@@ -11,8 +12,12 @@ export function LoginScreen() {
     setBusy(as)
     setError(null)
     const email = as === 'client' ? DEMO_CLIENT_EMAIL : DEMO_COACH_EMAIL
-    const { error } = await supabase.auth.signInWithPassword({ email, password: DEMO_PASSWORD })
-    if (error) setError(error.message)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: DEMO_PASSWORD })
+      if (error) setError(friendlyErrorMessage(error))
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    }
     setBusy(null)
   }
 

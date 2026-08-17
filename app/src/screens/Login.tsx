@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase, DEMO_CLIENT_EMAIL, DEMO_COACH_EMAIL, DEMO_PASSWORD } from '../lib/supabase'
+import { friendlyErrorMessage } from '../lib/errors'
 
 export function Login() {
   const [busy, setBusy] = useState<'client' | 'coach' | null>(null)
@@ -9,8 +10,12 @@ export function Login() {
     setBusy(as)
     setError(null)
     const email = as === 'client' ? DEMO_CLIENT_EMAIL : DEMO_COACH_EMAIL
-    const { error } = await supabase.auth.signInWithPassword({ email, password: DEMO_PASSWORD })
-    if (error) setError(error.message)
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: DEMO_PASSWORD })
+      if (error) setError(friendlyErrorMessage(error))
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    }
     setBusy(null)
   }
 

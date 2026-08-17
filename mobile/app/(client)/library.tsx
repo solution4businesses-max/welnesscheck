@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native'
 import { supabase } from '../../lib/supabase'
-import { Screen, Eyebrow, Title, Card } from '../../components/ui'
+import { Screen, Eyebrow, Title, Card, ErrorBanner } from '../../components/ui'
+import { friendlyErrorMessage } from '../../lib/errors'
 import { colors } from '../../lib/theme'
 
 type Content = { id: string; title: string; type: 'audio' | 'video' | 'pdf'; duration_seconds: number | null; is_new: boolean }
@@ -20,38 +21,43 @@ export default function Library() {
   const [items, setItems] = useState<Content[]>([])
   const [pick, setPick] = useState<Pick | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-        const [{ data: content }, { data: picks }] = await Promise.all([
-          supabase.from('library_content').select('id, title, type, duration_seconds, is_new').order('created_at'),
-          supabase
-            .from('coach_picks')
-            .select('coach_note, library_content(id, title, type, duration_seconds, is_new)')
-            .order('week_of', { ascending: false })
-            .limit(1),
-        ])
-        if (cancelled) return
-        setItems(content ?? [])
-        const p = picks?.[0] as unknown as Pick | undefined
-        setPick(p ?? null)
-        setLoading(false)
-      }
-    load()
-    return () => {
-      cancelled = true
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [{ data: content }, { data: picks }] = await Promise.all([
+        supabase.from('library_content').select('id, title, type, duration_seconds, is_new').order('created_at'),
+        supabase
+          .from('coach_picks')
+          .select('coach_note, library_content(id, title, type, duration_seconds, is_new)')
+          .order('week_of', { ascending: false })
+          .limit(1),
+      ])
+      setItems(content ?? [])
+      const p = picks?.[0] as unknown as Pick | undefined
+      setPick(p ?? null)
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   return (
     <Screen>
       <Eyebrow>Library & Coach</Eyebrow>
       <Title>What you might need today.</Title>
 
+      {error && <ErrorBanner message={error} onRetry={load} />}
       {loading && <ActivityIndicator />}
 
-      {pick && (
+      {!error && pick && (
         <View style={styles.pickCard}>
           <Text style={styles.pickEyebrow}>Coach pick for you · this week</Text>
           <Text style={styles.pickTitle}>{pick.library_content.title}</Text>
@@ -64,18 +70,22 @@ export default function Library() {
         </View>
       )}
 
-      <Text style={styles.sectionLabel}>Everything</Text>
-      {items.map((item) => (
-        <Card key={item.id} style={styles.itemCard}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <Text style={styles.itemMeta}>
-              {[formatDuration(item.duration_seconds), TYPE_LABEL[item.type]].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
-          {item.is_new && <Text style={styles.newBadge}>New</Text>}
-        </Card>
-      ))}
+      {!error && (
+        <>
+          <Text style={styles.sectionLabel}>Everything</Text>
+          {items.map((item) => (
+            <Card key={item.id} style={styles.itemCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>{item.title}</Text>
+                <Text style={styles.itemMeta}>
+                  {[formatDuration(item.duration_seconds), TYPE_LABEL[item.type]].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+              {item.is_new && <Text style={styles.newBadge}>New</Text>}
+            </Card>
+          ))}
+        </>
+      )}
     </Screen>
   )
 }

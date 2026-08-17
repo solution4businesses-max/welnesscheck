@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Profile } from '../lib/useSession'
 import { currentWeekISO, todayISO } from '../lib/dates'
+import { friendlyErrorMessage } from '../lib/errors'
+import { ErrorBanner } from '../components/ErrorBanner'
 
 type Goal = { id: string; title: string; target_days_per_week: number }
 type Session = { scheduled_at: string; duration_minutes: number }
@@ -13,10 +15,12 @@ export function Home({ profile }: { profile: Profile }) {
   const [progress, setProgress] = useState<Record<string, number>>({})
   const [nextSession, setNextSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
       const [{ data: checkIn }, { data: goalRows }, { data: sessionRows }] = await Promise.all([
         supabase.from('check_ins').select('id').eq('check_in_date', todayISO()).maybeSingle(),
         supabase
@@ -31,7 +35,6 @@ export function Home({ profile }: { profile: Profile }) {
           .order('scheduled_at')
           .limit(1),
       ])
-      if (cancelled) return
       setCheckedInToday(!!checkIn)
       setGoals(goalRows ?? [])
       setNextSession(sessionRows?.[0] ?? null)
@@ -47,19 +50,22 @@ export function Home({ profile }: { profile: Profile }) {
           )
           .in('log_date', week)
           .eq('completed', true)
-        if (!cancelled && logs) {
+        if (logs) {
           const counts: Record<string, number> = {}
           for (const log of logs) counts[log.goal_id] = (counts[log.goal_id] ?? 0) + 1
           setProgress(counts)
         }
       }
+    } catch (e) {
+      setError(friendlyErrorMessage(e))
+    } finally {
       setLoading(false)
     }
-    load()
-    return () => {
-      cancelled = true
-    }
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const firstName = profile.full_name.split(' ')[0]
 
@@ -71,7 +77,9 @@ export function Home({ profile }: { profile: Profile }) {
         <p className="text-stone-500 text-sm mt-1">One small thing today. That's the system.</p>
       </div>
 
-      {loading ? (
+      {error ? (
+        <ErrorBanner message={error} onRetry={load} />
+      ) : loading ? (
         <p className="text-stone-400 text-sm">Loading…</p>
       ) : (
         <>
